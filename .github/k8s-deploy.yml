@@ -97,7 +97,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
         jobs:
   minikube:
@@ -109,11 +109,11 @@ jobs:
       - name: Get Minikube IP
         run: echo ${{ steps.minikube.outputs.ip }}
 
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: 3.2  # Adjust Ruby version as needed
-          bundler-cache: true
+      # - name: Set up Ruby
+      #   uses: ruby/setup-ruby@v1
+      #   with:
+      #     ruby-version: 3.2  # Adjust Ruby version as needed
+      #     bundler-cache: true
 
       - name: Install dependencies and run tests
         run: |
@@ -128,7 +128,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Get next version tag
         id: set_tag
