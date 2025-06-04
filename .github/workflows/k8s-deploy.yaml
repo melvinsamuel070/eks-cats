@@ -84,7 +84,6 @@
 
 
 
-
 name: CI/CD Pipeline with Versioning, Rolling Update, and Rollback
 
 on:
@@ -99,20 +98,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-        jobs:
   minikube:
     runs-on: ubuntu-latest
     steps:
       - name: Start Minikube
         id: minikube
         uses: hiberbee/github-action-minikube@master
+
       - name: Get Minikube IP
         run: echo ${{ steps.minikube.outputs.ip }}
 
       # - name: Set up Ruby
       #   uses: ruby/setup-ruby@v1
       #   with:
-      #     ruby-version: 3.2  # Adjust Ruby version as needed
+      #     ruby-version: 3.2
       #     bundler-cache: true
 
       - name: Install dependencies and run tests
@@ -125,7 +124,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version_tag: ${{ steps.set_tag.outputs.version_tag }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -154,93 +152,86 @@ jobs:
           git tag "v${{ steps.set_tag.outputs.version_tag }}"
           git push origin "v${{ steps.set_tag.outputs.version_tag }}"
 
-
-
-
   build-and-deploy:
-  needs: tag-and-release
-  runs-on: ubuntu-latest
-  env:
-    VERSION: ${{ needs.tag-and-release.outputs.version_tag }}
+    needs: tag-and-release
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.tag-and-release.outputs.version_tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v4
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Build and push Docker image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/sanity:${VERSION} .
 
+      - name: Replace version placeholder in deployment and service manifests
+        run: |
+          mkdir -p k8s
+          sed "s/__VERSION__/${VERSION}/g" deployment.yaml > k8s/deployment-updated.yaml
+          sed "s/__VERSION__/${VERSION}/g" sinatraservice.yaml > k8s/service-updated.yaml
 
-    - name: Build and push Docker image
-      run: |
-        docker build -t ${{ secrets.DOCKER_USERNAME }}/sanity:${VERSION} .
+      - name: Install Prometheus
+        run: |
+          PROM_URL="https://raw.githubusercontent.com/prometheus-community/helm-charts/main/charts/kube-prometheus-stack/values.yaml"
+          echo "Using Prometheus values from: $PROM_URL"
+          echo "$PROM_URL" > prometheus_url.txt
 
+          kubectl create namespace prometheus || true
+          kubectl create configmap prometheus-server-config --from-file=prometheus.yml -n prometheus || true
+          kubectl apply -f "$PROM_URL" -n prometheus
+          kubectl get all -n prometheus
+          kubectl rollout status deployment/prometheus-deployment -n prometheus --timeout=120s
 
-    - name: Replace version placeholder in deployment and service manifests
-      run: |
-        mkdir -p k8s
-        sed "s/__VERSION__/${VERSION}/g" deployment.yaml > k8s/deployment-updated.yaml
-        sed "s/__VERSION__/${VERSION}/g" sinatraservice.yaml > k8s/service-updated.yaml
+      - name: Setting up Grafana
+        run: |
+          GRAFANA_URL="https://raw.githubusercontent.com/grafana/helm-charts/main/charts/grafana/values.yaml"
+          echo "Using Grafana values from: $GRAFANA_URL"
+          echo "$GRAFANA_URL" > grafana_url.txt
 
+          kubectl create namespace grafana || true
+          kubectl create configmap mahiratechnology-grafana-config --from-file=grafana.ini -n grafana || true
+          kubectl apply -f "$GRAFANA_URL" -n grafana
+          kubectl get all -n grafana
+          kubectl rollout status deployment/grafana-deployment -n grafana --timeout=120s
 
-    - name: Install Prometheus
-      run: |
-       PROM_URL="https://raw.githubusercontent.com/prometheus-community/helm-charts/main/charts/kube-prometheus-stack/values.yaml"
-       echo "Using Prometheus values from: $PROM_URL"
-       echo "$PROM_URL" > prometheus_url.txt
+      - name: Copy manifests to EC2
+        uses: appleboy/scp-action@v0.1.6
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "k8s/*.yaml"
+          target: "/home/${{ secrets.EC2_USER }}/k8s/"
 
-       kubectl create namespace prometheus || true
-       kubectl create configmap prometheus-server-config --from-file=prometheus.yml -n prometheus || true
-       kubectl apply -f "$PROM_URL" -n prometheus
-       kubectl get all -n prometheus
-       kubectl rollout status deployment/prometheus-deployment -n prometheus --timeout=120s
+      - name: Apply manifests on EC2 via kubectl
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            kubectl apply -f /home/${{ secrets.EC2_USER }}/k8s/deployment-updated.yaml
+            kubectl apply -f /home/${{ secrets.EC2_USER }}/k8s/service-updated.yaml
+            kubectl rollout status deployment/sinatra-v1 --timeout=120s
 
-    - name: Setting up Grafana
-      run: |
-       GRAFANA_URL="https://raw.githubusercontent.com/grafana/helm-charts/main/charts/grafana/values.yaml"
-       echo "Using Grafana values from: $GRAFANA_URL"
-       echo "$GRAFANA_URL" > grafana_url.txt
- 
-       kubectl create namespace grafana || true
-       kubectl create configmap mahiratechnology-grafana-config --from-file=grafana.ini -n grafana || true
-       kubectl apply -f "$GRAFANA_URL" -n grafana
-       kubectl get all -n grafana
-       kubectl rollout status deployment/grafana-deployment -n grafana --timeout=120s
-
-    - name: Copy manifests to EC2
-      uses: appleboy/scp-action@v0.1.6
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.EC2_SSH_KEY }}
-        source: "k8s/*.yaml"
-        target: "/home/${{ secrets.EC2_USER }}/k8s/"
-
-    - name: Apply manifests on EC2 via kubectl
-      uses: appleboy/ssh-action@v0.1.6
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.EC2_SSH_KEY }}
-        script: |
-          kubectl apply -f /home/${{ secrets.EC2_USER }}/k8s/deployment-updated.yaml
-          kubectl apply -f /home/${{ secrets.EC2_USER }}/k8s/service-updated.yaml
-          kubectl rollout status deployment/sinatra-v1 --timeout=120s
-
-rollback:
-  if: failure()
-  runs-on: ubuntu-latest
-  steps:
-    - name: Rollback deployment on EC2 via kubectl
-      uses: appleboy/ssh-action@v0.1.6
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.EC2_SSH_KEY }}
-        script: |
-          echo "Rolling back deployment sinatra-v1"
-          kubectl rollout undo deployment/sinatra-v1
-          kubectl rollout status deployment/sinatra-v1 --timeout=120s
+  rollback:
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Rollback deployment on EC2 via kubectl
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "Rolling back deployment sinatra-v1"
+            kubectl rollout undo deployment/sinatra-v1
+            kubectl rollout status deployment/sinatra-v1 --timeout=120s
