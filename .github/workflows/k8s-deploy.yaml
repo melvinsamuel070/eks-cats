@@ -116,7 +116,7 @@ jobs:
         run: echo ${{ steps.minikube.outputs.ip }}
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@latest
+        uses: ruby/setup-ruby@v1
         with:
           ruby-version: 3.2
           bundler-cache: true
