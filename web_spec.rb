@@ -14,6 +14,12 @@ app.use(metricsMiddleware);
     Cats::Web.new
   end
 
+  RSpec.describe 'Sinatra App' do
+  include Rack::Test::Methods
+
+  def app
+    Sinatra::Application
+  end
 
 
   describe 'GET /health' do
@@ -24,3 +30,6 @@ app.use(metricsMiddleware);
     end
   end
 end
+
+
+

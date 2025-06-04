@@ -132,9 +132,9 @@ jobs:
 
       - name: Run tests
         run: |
-          bundle exec rspec spec/web_spec.rb  # Target your specific test file
+          bundle exec rspec web_spec.rb  # Target your specific test file
 
-          
+
   tag-and-release:
     needs: test
     runs-on: ubuntu-latest
