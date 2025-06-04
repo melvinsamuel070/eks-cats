@@ -105,6 +105,13 @@ jobs:
         id: minikube
         uses: hiberbee/github-action-minikube@master
 
+      - name: Install and start Minikube
+        run: |
+         curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+         sudo install minikube-linux-amd64 /usr/local/bin/minikube
+         minikube start --driver=docker
+ 
+
       - name: Get Minikube IP
         run: echo ${{ steps.minikube.outputs.ip }}
 
