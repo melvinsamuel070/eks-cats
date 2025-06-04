@@ -116,11 +116,11 @@ jobs:
         run: echo ${{ steps.minikube.outputs.ip }}
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@latest
         with:
           ruby-version: 3.2
           bundler-cache: true
-          working-directory: cats
+          working-directory: .
 
       - name: Show directory for debug
         run: |
