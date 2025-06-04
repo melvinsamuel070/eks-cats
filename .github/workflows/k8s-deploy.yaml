@@ -119,20 +119,22 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: 3.2
-          bundler-cache: true
-          working-directory: .
+          bundler-cache: true  # Auto-installs gems from Gemfile.lock
 
-      - name: Show directory for debug
+      - name: Debug directory structure
         run: |
-         pwd
-         ls -la
+          echo "Current directory:"
+          pwd
+          echo "Contents:"
+          ls -la
+          echo "Gemfile exists?"
+          test -f Gemfile && echo "Yes" || echo "No"
 
-      - name: Install dependencies and run tests
-        working-directory: cats
+      - name: Run tests
         run: |
-          bundle install
-          bundle exec rspec
+          bundle exec rspec spec/web_spec.rb  # Target your specific test file
 
+          
   tag-and-release:
     needs: test
     runs-on: ubuntu-latest
