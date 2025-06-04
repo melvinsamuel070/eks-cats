@@ -122,9 +122,11 @@ jobs:
           bundler-cache: true
 
       - name: Install dependencies and run tests
+        working-directory: /home/melvin/cats  # replace with the actual folder containing your Gemfile
         run: |
           bundle install
           bundle exec rspec
+
 
   tag-and-release:
     needs: test
