@@ -120,6 +120,7 @@ jobs:
         with:
           ruby-version: 3.2
           bundler-cache: true
+          working-directory: cats
 
       - name: Show directory for debug
         run: |
@@ -127,9 +128,10 @@ jobs:
          ls -la
 
       - name: Install dependencies and run tests
+        working-directory: cats
         run: |
-         bundle install
-         bundle exec rspec
+          bundle install
+          bundle exec rspec
 
   tag-and-release:
     needs: test
