@@ -1,60 +1,246 @@
-name: Deploy and Test Sinatra App
+# name: Sinatra CI/CD
+
+# on:
+#   push:
+#     tags:
+#       - 'v*.*.*' # triggers on semantic version tags like v1.0.0
+
+# jobs:
+#   tag-and-release:
+#     runs-on: ubuntu-latest
+#     outputs:
+#       version_tag: ${{ steps.get_tag.outputs.version_tag }}
+
+#     steps:
+#       - name: Get version tag
+#         id: get_tag
+#         run: echo "version_tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+#   build-and-push:
+#     needs: [tag-and-release]
+#     runs-on: ubuntu-latest
+
+#     env:
+#       IMAGE_NAME: melvinsamuel070/sanity
+#       IMAGE_VERSION: ${{ needs.tag-and-release.outputs.version_tag }}
+
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
+
+#       - name: Log in to Docker Hub
+#         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+#       - name: Build Docker image
+#         run: docker build -t $IMAGE_NAME:$IMAGE_VERSION .
+
+#       - name: Push Docker image
+#         run: docker push $IMAGE_NAME:$IMAGE_VERSION
+
+#   deploy:
+#     needs: [build-and-push]
+#     runs-on: ubuntu-latest
+
+#     env:
+#       IMAGE_VERSION: ${{ needs.tag-and-release.outputs.version_tag }}
+
+#     steps:
+#       - name: Deploy to Minikube via SSH
+#         uses: appleboy/ssh-action@v1.0.0
+#         with:
+#           host: ${{ secrets.EC2_HOST }}
+#           username: ${{ secrets.EC2_USER }}
+#           key: ${{ secrets.EC2_SSH_KEY }}
+#           script: |
+#             echo "Injecting version ${IMAGE_VERSION} into deployment..."
+#             sed "s|__VERSION__|${IMAGE_VERSION}|g" ~/k8s/deployment.yaml > /tmp/deploy.yaml
+
+#             echo "Applying Kubernetes deployment..."
+#             kubectl apply -f /tmp/deploy.yaml
+
+#             echo "Waiting for rollout to complete..."
+#             kubectl rollout status deployment/sinatra-v1 --timeout=120s
+
+#   rollback:
+#     if: failure()
+#     needs: deploy
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Roll back to previous version
+#         uses: appleboy/ssh-action@v1.0.0
+#         with:
+#           host: ${{ secrets.EC2_HOST }}
+#           username: ${{ secrets.EC2_USER }}
+#           key: ${{ secrets.EC2_SSH_KEY }}
+#           script: |
+#             echo "Rolling back due to failed rollout..."
+#             kubectl rollout undo deployment/sinatra-v1
+
+
+
+
+
+
+
+
+
+name: CI/CD Pipeline with Versioning, Rolling Update, and Rollback
 
 on:
   push:
-    branches: [master]
+    branches:
+      - master
 
 jobs:
-  test-deploy:
+  test:
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    services:
-      # Start a Docker-in-Docker service for testing
-      docker:
-        image: docker:dind
-        options: --privileged
+        jobs:
+  minikube:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start Minikube
+        id: minikube
+        uses: hiberbee/github-action-minikube@master
+      - name: Get Minikube IP
+        run: echo ${{ steps.minikube.outputs.ip }}
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.2  # Adjust Ruby version as needed
+          bundler-cache: true
+
+      - name: Install dependencies and run tests
+        run: |
+          bundle install
+          bundle exec rspec
+
+  tag-and-release:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      version_tag: ${{ steps.set_tag.outputs.version_tag }}
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub (optional)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
-
-      - name: Build Docker image
+      - name: Get next version tag
+        id: set_tag
         run: |
-          docker build -t sinatra-app -f app/Dockerfile app
+          TAG=$(git tag --sort=-v:refname | head -n1)
+          echo "Latest tag: $TAG"
 
-      - name: Run container for testing
-        run: |
-          docker run -d --name sinatra-test -p 8000:8000 sinatra-app
-          sleep 10  # Give the app more time to start
-          docker ps -a  # Debug: show container status
+          if [ -z "$TAG" ]; then
+            NEW_TAG="1.0.0"
+          else
+            IFS='.' read -r MAJOR MINOR PATCH <<< "${TAG#v}"
+            MINOR=$((MINOR + 1))
+            PATCH=0
+            NEW_TAG="${MAJOR}.${MINOR}.${PATCH}"
+          fi
 
-      - name: Test Sinatra app
-        run: |
-          # Test basic connectivity
-          curl --fail --retry 5 --retry-delay 3 http://localhost:8000/ || exit 1
-          
-          # Add more comprehensive tests here if needed
-          # Example:
-          # curl --fail http://localhost:8000/healthcheck
-          # curl --fail http://localhost:8000/api/endpoint
+          echo "version_tag=$NEW_TAG" >> $GITHUB_OUTPUT
 
-      - name: Push to Docker Hub (optional)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Create Git tag
         run: |
-          docker tag sinatra-app ${{ secrets.DOCKER_HUB_USERNAME }}/sinatra-app:${{ github.sha }}
-          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/sinatra-app:${{ github.sha }}
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag "v${{ steps.set_tag.outputs.version_tag }}"
+          git push origin "v${{ steps.set_tag.outputs.version_tag }}"
 
-      - name: Cleanup
-        run: |
-          docker stop sinatra-test || true
-          docker rm sinatra-test || true
+
+
+
+  build-and-deploy:
+  needs: tag-and-release
+  runs-on: ubuntu-latest
+  env:
+    VERSION: ${{ needs.tag-and-release.outputs.version_tag }}
+
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v4
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+
+    - name: Build and push Docker image
+      run: |
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/sanity:${VERSION} .
+
+
+    - name: Replace version placeholder in deployment and service manifests
+      run: |
+        mkdir -p k8s
+        sed "s/__VERSION__/${VERSION}/g" deployment.yaml > k8s/deployment-updated.yaml
+        sed "s/__VERSION__/${VERSION}/g" sinatraservice.yaml > k8s/service-updated.yaml
+
+
+    - name: Install Prometheus
+      run: |
+       PROM_URL="https://raw.githubusercontent.com/prometheus-community/helm-charts/main/charts/kube-prometheus-stack/values.yaml"
+       echo "Using Prometheus values from: $PROM_URL"
+       echo "$PROM_URL" > prometheus_url.txt
+
+       kubectl create namespace prometheus || true
+       kubectl create configmap prometheus-server-config --from-file=prometheus.yml -n prometheus || true
+       kubectl apply -f "$PROM_URL" -n prometheus
+       kubectl get all -n prometheus
+       kubectl rollout status deployment/prometheus-deployment -n prometheus --timeout=120s
+
+    - name: Setting up Grafana
+      run: |
+       GRAFANA_URL="https://raw.githubusercontent.com/grafana/helm-charts/main/charts/grafana/values.yaml"
+       echo "Using Grafana values from: $GRAFANA_URL"
+       echo "$GRAFANA_URL" > grafana_url.txt
+ 
+       kubectl create namespace grafana || true
+       kubectl create configmap mahiratechnology-grafana-config --from-file=grafana.ini -n grafana || true
+       kubectl apply -f "$GRAFANA_URL" -n grafana
+       kubectl get all -n grafana
+       kubectl rollout status deployment/grafana-deployment -n grafana --timeout=120s
+
+    - name: Copy manifests to EC2
+      uses: appleboy/scp-action@v0.1.6
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        source: "k8s/*.yaml"
+        target: "/home/${{ secrets.EC2_USER }}/k8s/"
+
+    - name: Apply manifests on EC2 via kubectl
+      uses: appleboy/ssh-action@v0.1.6
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          kubectl apply -f /home/${{ secrets.EC2_USER }}/k8s/deployment-updated.yaml
+          kubectl apply -f /home/${{ secrets.EC2_USER }}/k8s/service-updated.yaml
+          kubectl rollout status deployment/sinatra-v1 --timeout=120s
+
+rollback:
+  if: failure()
+  runs-on: ubuntu-latest
+  steps:
+    - name: Rollback deployment on EC2 via kubectl
+      uses: appleboy/ssh-action@v0.1.6
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          echo "Rolling back deployment sinatra-v1"
+          kubectl rollout undo deployment/sinatra-v1
+          kubectl rollout status deployment/sinatra-v1 --timeout=120s
