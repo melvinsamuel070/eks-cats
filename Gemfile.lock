@@ -13,6 +13,8 @@ GEM
     rack (2.2.4)
     rack-protection (2.2.0)
       rack
+    rack-test (2.2.0)
+      rack (>= 1.3)
     ruby2_keywords (0.0.5)
     sinatra (2.2.0)
       mustermann (~> 1.0)
@@ -33,6 +35,7 @@ PLATFORMS
 DEPENDENCIES
   prometheus-client
   puma (>= 3.12.5)
+  rack-test
   sinatra (= 2.2.0)
   sinatra-contrib (= 2.2.0)
 
