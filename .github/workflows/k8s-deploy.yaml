@@ -276,9 +276,9 @@ jobs:
 
       - name: Replace version placeholder in deployment and service manifests
         run: |
-          mkdir -p k8s
-          sed "s/__VERSION__/${VERSION}/g" deployment.yaml > k8s/deployment-updated.yaml
-          sed "s/__VERSION__/${VERSION}/g" sinatraservice.yaml > k8s/service-updated.yaml
+         mkdir -p k8s
+         sed "s/__VERSION__/${VERSION}/g" deployment.yaml > k8s/deployment-updated.yaml
+         sed "s/__VERSION__/${VERSION}/g" sinatra-service.yaml > k8s/service-updated.yaml
 
       - name: Apply Kubernetes manifests to Minikube
         run: |
