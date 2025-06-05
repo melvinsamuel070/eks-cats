@@ -200,7 +200,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     outputs:
-      version_tag: ${{ steps.set_tag.outputs.version_tag }}
+     version_tag: ${{ steps.set_tag.outputs.version_tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -208,45 +208,51 @@ jobs:
       - name: Get next version tag
         id: set_tag
         run: |
-          TAG=$(git tag --sort=-v:refname | head -n1)
-          echo "Latest tag: $TAG"
+         TAG=$(git tag --sort=-v:refname | head -n1)
+         echo "Latest tag: $TAG"
 
-          if [ -z "$TAG" ]; then
+         if [ -z "$TAG" ]; then
           NEW_TAG="1.0.0"
-          else
+         else
           IFS='.' read -r MAJOR MINOR PATCH <<< "${TAG#v}"
           MAJOR=$((MAJOR + 1))
           MINOR=0
           PATCH=0
           NEW_TAG="${MAJOR}.${MINOR}.${PATCH}"
-          fi
+         fi
 
-          echo "version_tag=$NEW_TAG" >> $GITHUB_OUTPUT
-
+         echo "version_tag=$NEW_TAG" >> $GITHUB_OUTPUT
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 3.2.8
-          bundler-cache: true
+         ruby-version: 3.2.8
+         bundler-cache: true
 
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ruby-dev build-essential libssl-dev
+         sudo apt-get update
+         sudo apt-get install -y ruby-dev build-essential libssl-dev
 
       - name: Run RSpec test suite
         run: bundle exec rspec
 
       - name: Create Git tag
         env:
-          GH_PAT: ${{ secrets.GH_PAT }}
+         GH_PAT: ${{ secrets.GH_PAT }}
         run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git remote set-url origin https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}
-          git tag "v${{ steps.set_tag.outputs.version_tag }}"
-          git push origin "v${{ steps.set_tag.outputs.version_tag }}"
+         git config user.name "GitHub Actions"
+         git config user.email "actions@github.com"
+         git remote set-url origin https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}
+
+         TAG="v${{ steps.set_tag.outputs.version_tag }}"
+         if git ls-remote --tags origin | grep -q "refs/tags/${TAG}$"; then
+          echo "Tag ${TAG} already exists on remote, skipping push."
+         else
+          git tag "${TAG}"
+          git push origin "${TAG}"
+          echo "Tag ${TAG} created and pushed."
+         fi
 
   build-and-deploy:
     needs: tag-and-release
