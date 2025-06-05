@@ -1,6 +1,6 @@
+require 'spec_helper'
 require 'rack/test'
-require 'rspec'
-require_relative '/home/melvin/cats' # Make sure this points to your actual Sinatra app file
+require_relative '../app/web' # update path to your app
 
 RSpec.describe Cats::Web do
   include Rack::Test::Methods
@@ -10,12 +10,10 @@ RSpec.describe Cats::Web do
   end
 
   describe 'GET /health' do
-    it 'returns status 200 and OK' do
+    it 'returns 200 OK' do
       get '/health'
       expect(last_response.status).to eq(200)
       expect(last_response.body).to eq('OK')
     end
   end
 end
-
-

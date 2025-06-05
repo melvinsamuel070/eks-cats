@@ -154,8 +154,9 @@ jobs:
         run: |
          sudo apt-get update
          sudo apt-get install -y ruby-dev build-essential libssl-dev
-      - name: Run tests
-        run: bundle exec ruby web_spec.rb
+      - name: Run RSpec test suite
+        run: bundle exec rspec
+
 
 
 
