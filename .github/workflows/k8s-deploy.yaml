@@ -115,25 +115,31 @@ jobs:
       - name: Get Minikube IP
         run: echo ${{ steps.minikube.outputs.ip }}
 
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: 3.2
-          bundler-cache: true  # Auto-installs gems from Gemfile.lock
-
-      - name: Debug directory structure
+      - name: Verify directory structure
         run: |
           echo "Current directory:"
           pwd
           echo "Contents:"
           ls -la
-          echo "Gemfile exists?"
-          test -f Gemfile && echo "Yes" || echo "No"
+          echo "Checking for Gemfile:"
+          test -f Gemfile && echo "Gemfile found in root" || echo "Gemfile not in root"
+          echo "Checking cats/ directory:"
+          test -d cats && (ls -la cats/; test -f cats/Gemfile && echo "Gemfile found in cats/" || echo "Gemfile not in cats/") || echo "No cats/ directory"
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          # Remove working-directory since your files are in root
+
+      - name: Install dependencies
+        run: |
+          bundle check || bundle install
 
       - name: Run tests
         run: |
-          bundle exec rspec web_spec.rb  # Target your specific test file
-
+          bundle exec rspec spec/web_spec.rb
 
   tag-and-release:
     needs: test
