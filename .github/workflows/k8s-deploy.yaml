@@ -108,7 +108,7 @@ jobs:
       - name: Install and start Minikube
         run: |
          curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-         sudo install minikube-linux-amd64 /usr/melvin/catsminikube
+         sudo install minikube-linux-amd64 /usr/local/bin/minikube
          minikube start --driver=docker
  
 
@@ -126,7 +126,7 @@ jobs:
         run: bundle install
 
       - name: Run tests
-        run: bundle exec rspec web_spec.rb
+        run: bundle exec web_spec.rb
 
   tag-and-release:
     needs: test
@@ -136,6 +136,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+
 
       - name: Get next version tag
         id: set_tag
@@ -154,6 +156,8 @@ jobs:
 
           echo "version_tag=$NEW_TAG" >> $GITHUB_OUTPUT
 
+
+
       - name: Create Git tag
         env:
          GH_PAT: ${{ secrets.GH_PAT }}
@@ -163,6 +167,11 @@ jobs:
           git remote set-url origin https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}
           git tag "v${{ steps.set_tag.outputs.version_tag }}"
           git push origin "v${{ steps.set_tag.outputs.version_tag }}"
+
+
+
+
+
   build-and-deploy:
     needs: tag-and-release
     runs-on: ubuntu-latest
