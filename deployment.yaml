@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: sinatra-v1
 spec:
-  replicas: 3
+  replicas: 2
   strategy:
     type: RollingUpdate        # <-- added explicit type
     rollingUpdate:
