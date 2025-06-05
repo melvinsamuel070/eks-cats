@@ -149,15 +149,12 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
          ruby-version: 3.2
-         bundler-cache: true
+         bundler-cache: true  # Automatically runs `bundle install` with caching
 
-      - name: Install dependencies
-        run: bundle install
+         # No need for separate `bundle install` if `bundler-cache: true` is set
 
       - name: Run tests
-        run: bundle exec web_spec.rb
-
-
+        run: bundle exec ruby web_spec.rb  # Added `ruby` command
  
       - name: Create Git tag
         env:
