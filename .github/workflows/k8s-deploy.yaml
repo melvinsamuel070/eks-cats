@@ -290,41 +290,44 @@ jobs:
          mkdir -p k8s
          sed "s/__VERSION__/${VERSION}/g" deployment.yaml > k8s/deployment-updated.yaml
          sed "s/__VERSION__/${VERSION}/g" sinatra-service.yaml > k8s/service-updated.yaml
+         cat k8s/deployment-updated.yaml | grep image
 
       - name: Apply Kubernetes manifests
         run: |
          kubectl apply -f k8s/deployment-updated.yaml
          kubectl apply -f k8s/service-updated.yaml
 
+      - name: Force rollout
+        run: |
+         kubectl rollout restart deployment/sinatra-v1
+
       - name: Verify pods are running new image version
         run: |
-          kubectl get pods -l app=sinatra -o jsonpath="{range .items[*]}{.metadata.name}:{range .spec.containers[*]}{.image}{'\n'}{end}{end}"
+         sleep 15
+         kubectl get pods -l app=sinatra -o jsonpath="{range .items[*]}{.metadata.name}:{range .spec.containers[*]}{.image}{'\n'}{end}{end}"
 
-      - name: Install Prometheus
+      - name: Update Prometheus ConfigMap
         run: |
-          
-
-          kubectl create namespace prometheus
-          kubectl create configmap prometheus-server-config --from-file=prometheus.yml
-          kubectl apply -f https://raw.githubusercontent.com/prometheus-community/helm-charts/main/charts/kube-prometheus-stack/values.yaml -n prometheus
-          kubectl get all -n prometheus
-          kubectl rollout status deployment/prometheus-deployment -n prometheus --timeout=120s
-
-      - name: Setting up Grafana
+         kubectl -n prometheus delete configmap prometheus-server-config || true
+         kubectl -n prometheus create configmap prometheus-server-config --from-file=prometheus.yml
+      
+      - name: Apply Kubernetes manifests
         run: |
-          
+         kubectl apply -f k8s/deployment-updated.yaml
+         kubectl apply -f k8s/service-updated.yaml
+         kubectl apply -f k8s/prometheus-configmap.yaml
 
-          kubectl create namespace grafana
-          kubectl create configmap mahiratechnology-grafana-config - from-file=grafana.ini
-          kubectl apply -f https://raw.githubusercontent.com/grafana/helm-charts/main/charts/grafana/values.yaml -n grafana
-          kubectl get all -n grafana
-          kubectl rollout status deployment/grafana-deployment -n grafana --timeout=120s
-
-      - name: exposing prometheus and grafana as a service
+      - name: Restart Prometheus Pod to load new config
         run: |
-          kubectl expose service grafana -n grafana - type=NodePort - target-port=3000 - name=grafana-service
-          kubectl expose service prometheus-server -n prometheus --type=NodePort - target-port=9090 -name=prometheus-service
-          kubectl get service prometheus-service -n prom
+         kubectl -n prometheus rollout restart deployment/prometheus-deployment
+
+
+
+
+
+
+
+     
 
       - name: Test application health
         run: |
