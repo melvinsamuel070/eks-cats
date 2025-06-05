@@ -116,17 +116,6 @@ jobs:
         run: echo ${{ steps.minikube.outputs.ip }}
 
       
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-         ruby-version: 3.2
-         bundler-cache: true
-
-      - name: Install dependencies
-        run: bundle install
-
-      - name: Run tests
-        run: bundle exec web_spec.rb
 
   tag-and-release:
     needs: test
@@ -156,8 +145,20 @@ jobs:
 
           echo "version_tag=$NEW_TAG" >> $GITHUB_OUTPUT
 
+          - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+         ruby-version: 3.2
+         bundler-cache: true
+
+      - name: Install dependencies
+        run: bundle install
+
+      - name: Run tests
+        run: bundle exec web_spec.rb
 
 
+ 
       - name: Create Git tag
         env:
          GH_PAT: ${{ secrets.GH_PAT }}
