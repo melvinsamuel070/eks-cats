@@ -115,27 +115,28 @@ jobs:
       - name: Get Minikube IP
         run: echo ${{ steps.minikube.outputs.ip }}
 
-      - name: Verify directory structure
+      
+      - name: Debug directory structure
         run: |
-          echo "Current directory:"
+          echo "=== Current directory ==="
           pwd
-          echo "Contents:"
+          echo "=== Contents ==="
           ls -la
-          echo "Checking for Gemfile:"
-          test -f Gemfile && echo "Gemfile found in root" || echo "Gemfile not in root"
-          echo "Checking cats/ directory:"
-          test -d cats && (ls -la cats/; test -f cats/Gemfile && echo "Gemfile found in cats/" || echo "Gemfile not in cats/") || echo "No cats/ directory"
+          echo "=== Gemfile check ==="
+          test -f Gemfile && echo "Gemfile FOUND in root" || echo "Gemfile MISSING in root"
+          echo "=== spec/ directory check ==="
+          test -d spec && echo "spec/ FOUND" || echo "spec/ MISSING"
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
           bundler-cache: true
-          # Remove working-directory since your files are in root
 
       - name: Install dependencies
         run: |
-          bundle check || bundle install
+          gem install bundler
+          bundle install
 
       - name: Run tests
         run: |
