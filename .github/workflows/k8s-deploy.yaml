@@ -149,14 +149,25 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-         ruby-version: 3.2
-         bundler-cache: true  # Automatically runs `bundle install` with caching
+         ruby-version: 3.2.8  # Explicit version matching your error
+         bundler-cache: true
 
-         # No need for separate `bundle install` if `bundler-cache: true` is set
+      - name: Install system dependencies
+        run: |
+         sudo apt-get update
+         sudo apt-get install -y build-essential libssl-dev
+
+      - name: Verify Ruby environment
+        run: |
+         ruby -v
+         bundle -v
+         bundle env
 
       - name: Run tests
-        run: bundle exec ruby web_spec.rb  # Added `ruby` command
- 
+        run: bundle exec ruby web_spec.rb
+
+
+        
       - name: Create Git tag
         env:
          GH_PAT: ${{ secrets.GH_PAT }}
