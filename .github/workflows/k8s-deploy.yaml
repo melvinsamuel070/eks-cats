@@ -149,16 +149,13 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
          ruby-version: 3.2.8
-         bundler: 2.2.4
          bundler-cache: true
-
       - name: Install system deps
-        run: |
-         sudo apt-get update
-         sudo apt-get install -y build-essential libssl-dev pkg-config
-
+        run: sudo apt-get install -y build-essential libssl-dev
       - name: Run tests
         run: bundle exec ruby web_spec.rb
+
+
 
       - name: Create Git tag
         env:
