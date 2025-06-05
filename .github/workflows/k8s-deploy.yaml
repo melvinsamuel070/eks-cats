@@ -145,6 +145,11 @@ jobs:
 
           echo "version_tag=$NEW_TAG" >> $GITHUB_OUTPUT
 
+      - name: gamifile Update
+        run: |
+           bundle install
+
+
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
