@@ -302,27 +302,29 @@ jobs:
 
       - name: Install Prometheus
         run: |
-          PROM_URL="https://raw.githubusercontent.com/prometheus-community/helm-charts/main/charts/kube-prometheus-stack/values.yaml"
-          echo "Using Prometheus values from: $PROM_URL"
-          echo "$PROM_URL" > prometheus_url.txt
+          
 
-          kubectl create namespace prometheus || true
-          kubectl create configmap prometheus-server-config --from-file=prometheus.yml -n prometheus || true
-          kubectl apply -f "$PROM_URL" -n prometheus
+          kubectl create namespace prometheus
+          kubectl create configmap prometheus-server-config --from-file=prometheus.yml
+          kubectl apply -f https://raw.githubusercontent.com/prometheus-community/helm-charts/main/charts/kube-prometheus-stack/values.yaml -n prometheus
           kubectl get all -n prometheus
           kubectl rollout status deployment/prometheus-deployment -n prometheus --timeout=120s
 
       - name: Setting up Grafana
         run: |
-          GRAFANA_URL="https://raw.githubusercontent.com/grafana/helm-charts/main/charts/grafana/values.yaml"
-          echo "Using Grafana values from: $GRAFANA_URL"
-          echo "$GRAFANA_URL" > grafana_url.txt
+          
 
-          kubectl create namespace grafana || true
-          kubectl create configmap mahiratechnology-grafana-config --from-file=grafana.ini -n grafana || true
-          kubectl apply -f "$GRAFANA_URL" -n grafana
+          kubectl create namespace grafana
+          kubectl create configmap mahiratechnology-grafana-config - from-file=grafana.ini
+          kubectl apply -f https://raw.githubusercontent.com/grafana/helm-charts/main/charts/grafana/values.yaml -n grafana
           kubectl get all -n grafana
           kubectl rollout status deployment/grafana-deployment -n grafana --timeout=120s
+
+      - name: exposing prometheus and grafana as a service
+        run: |
+          kubectl expose service grafana -n grafana - type=NodePort - target-port=3000 - name=grafana-service
+          kubectl expose service prometheus-server -n prometheus --type=NodePort - target-port=9090 -name=prometheus-service
+          kubectl get service prometheus-service -n prom
 
       - name: Test application health
         run: |
