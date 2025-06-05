@@ -145,29 +145,21 @@ jobs:
 
           echo "version_tag=$NEW_TAG" >> $GITHUB_OUTPUT
 
-  
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-         ruby-version: 3.2.8  # Explicit version matching your error
+         ruby-version: 3.2.8
+         bundler: 2.2.4
          bundler-cache: true
 
-      - name: Install system dependencies
+      - name: Install system deps
         run: |
          sudo apt-get update
-         sudo apt-get install -y build-essential libssl-dev
-
-      - name: Verify Ruby environment
-        run: |
-         ruby -v
-         bundle -v
-         bundle env
+         sudo apt-get install -y build-essential libssl-dev pkg-config
 
       - name: Run tests
         run: bundle exec ruby web_spec.rb
 
-
-        
       - name: Create Git tag
         env:
          GH_PAT: ${{ secrets.GH_PAT }}
