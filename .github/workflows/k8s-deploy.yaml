@@ -116,31 +116,17 @@ jobs:
         run: echo ${{ steps.minikube.outputs.ip }}
 
       
-      - name: Debug directory structure
-        run: |
-          echo "=== Current directory ==="
-          pwd
-          echo "=== Contents ==="
-          ls -la
-          echo "=== Gemfile check ==="
-          test -f Gemfile && echo "Gemfile FOUND in root" || echo "Gemfile MISSING in root"
-          echo "=== spec/ directory check ==="
-          test -d spec && echo "spec/ FOUND" || echo "spec/ MISSING"
-
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.2'
-          bundler-cache: true
+         ruby-version: 3.2
+         bundler-cache: true
 
       - name: Install dependencies
-        run: |
-          gem install bundler
-          bundle install
+        run: bundle install
 
       - name: Run tests
-        run: |
-          bundle exec rspec spec/web_spec.rb
+        run: bundle exec rspec web_spec.rb
 
   tag-and-release:
     needs: test
