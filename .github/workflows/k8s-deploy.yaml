@@ -316,8 +316,12 @@ jobs:
           kubectl apply -f k8s/deployment-updated.yaml -n prometheus
           kubectl apply -f k8s/service-updated.yaml -n prometheus
           kubectl apply -f prometheus-deployment.yaml -n prometheus
-          kubectl logs sinatra-v1-ff45ff547-d6qcc -n prometheus
-
+    
+          # Describe pods to get details and events
+          kubectl describe pods -n prometheus
+    
+          # Get logs for all pods in prometheus namespace
+          kubectl get pods -n prometheus -o name | xargs -I{} kubectl logs {} -n prometheus
 
       - name: Restart Prometheus Pod to load new config
         run: |
