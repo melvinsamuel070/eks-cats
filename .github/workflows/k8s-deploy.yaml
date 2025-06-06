@@ -324,8 +324,8 @@ jobs:
 
       - name: Test application health
         run: |
-          kubectl port-forward deployment/sinatra-v1 8080:8080 &
-          sleep 5
+         kubectl port-forward deployment/sinatra-v1 8080:8000 -n prometheus &
+         sleep 5
           curl -f http://localhost:8080/health
 
   rollback:
