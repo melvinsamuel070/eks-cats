@@ -315,6 +315,7 @@ jobs:
           kubectl apply -f prometheus-configmap.yaml -n prometheus
           kubectl apply -f k8s/deployment-updated.yaml -n prometheus
           kubectl apply -f k8s/service-updated.yaml -n prometheus
+          kubectl apply -f prometheus-deployment.yaml -n prometheus
 
       - name: Restart Prometheus Pod to load new config
         run: |
