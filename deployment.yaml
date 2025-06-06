@@ -4,7 +4,7 @@ metadata:
   name: sinatra-v1
   namespace: prometheus
 spec:
-  replicas: 2
+  replicas: 1
   strategy:
     type: RollingUpdate        # <-- added explicit type
     rollingUpdate:
