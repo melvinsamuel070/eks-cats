@@ -316,10 +316,14 @@ jobs:
           kubectl apply -f k8s/deployment-updated.yaml -n prometheus
           kubectl apply -f k8s/service-updated.yaml -n prometheus
           kubectl apply -f prometheus-deployment.yaml -n prometheus
-          kubectl describe pods -n prometheus
+          
 
-          kubectl logs -p $(kubectl get pods -n prometheus -l app=sinatra -o jsonpath="{.items[0].metadata.name}") -n prometheus
 
+      - name: Debug Pod State
+        run: |
+         kubectl get pods -n prometheus
+         kubectl describe pod -l app=sinatra -n prometheus
+         kubectl logs -l app=sinatra -n prometheus
 
       # - name: Restart Prometheus Pod to load new config
       #   run: |
