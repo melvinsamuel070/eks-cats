@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: sinatra-v1
-  namespace: prometheuse
+  namespace: prometheus
 spec:
   replicas: 4
   strategy:

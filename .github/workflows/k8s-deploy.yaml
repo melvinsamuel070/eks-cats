@@ -312,8 +312,8 @@ jobs:
       - name: Apply Prometheus ConfigMap and manifests
         run: |
          kubectl apply -f prometheus-configmap. -n prometheus
-         kubectl apply -f k8s/deployment-updated.yaml
-         kubectl apply -f k8s/service-updated.yaml
+         kubectl apply -f k8s/deployment-updated.yaml -n prometheus
+         kubectl apply -f k8s/service-updated.yaml -n prometheus  
 
       - name: Restart Prometheus Pod to load new config
         run: |
