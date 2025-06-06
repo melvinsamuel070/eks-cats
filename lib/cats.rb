@@ -16,7 +16,6 @@
 #   end
 # end
 
-
 # frozen_string_literal: true
 
 require 'sinatra/base'
@@ -28,9 +27,7 @@ module Cats
       set :url, URI('https://thecatapi.com/api/images/get').freeze
 
       enable :logging
-      file = File.new("#{settings.root}/log/production.log", 'a+')
-      file.sync = true
-      use Rack::CommonLogger, file
+      use Rack::CommonLogger, $stdout
     end
 
     # Health endpoint for Kubernetes
