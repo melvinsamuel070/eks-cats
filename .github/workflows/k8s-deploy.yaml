@@ -310,20 +310,15 @@ jobs:
         run: |
          kubectl get namespace prometheus || kubectl create namespace prometheus
 
-      - name: Update Prometheus ConfigMap
+      - name: Apply Prometheus ConfigMap and manifests
         run: |
-         kubectl -n prometheus delete configmap prometheus-server-config --ignore-not-found
-         kubectl -n prometheus create configmap prometheus-server-config --from-file=prometheus.yml
-
-      - name: Apply Kubernetes manifests
-        run: |
+         kubectl apply -f prometheus-configmap.yaml
          kubectl apply -f k8s/deployment-updated.yaml
          kubectl apply -f k8s/service-updated.yaml
-         kubectl apply -f k8s/prometheus-configmap.yaml
 
       - name: Restart Prometheus Pod to load new config
         run: |
-         kubectl -n prometheus rollout restart deployment/prometheus-deployment
+          kubectl -n prometheus rollout restart deployment/prometheus-deployment
 
 
       - name: Test application health
