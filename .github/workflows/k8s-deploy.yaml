@@ -317,11 +317,15 @@ jobs:
           kubectl apply -f k8s/service-updated.yaml -n prometheus
           kubectl apply -f prometheus-deployment.yaml -n prometheus
           kubectl describe pods -n prometheus
+          kubectl logs sinatra-v1-64d5df6c5d-6cgks -n 
+          kubectl describe pod sinatra-v1-64d5df6c5d-6cgks -n prometheus
 
-      - name: Restart Prometheus Pod to load new config
-        run: |
-          kubectl rollout restart deployment/sinatra-v1 -n prometheus
-          
+
+
+      # - name: Restart Prometheus Pod to load new config
+      #   run: |
+      #     kubectl rollout restart deployment/sinatra-v1 -n prometheus
+
 
       - name: Test application health
         run: |
