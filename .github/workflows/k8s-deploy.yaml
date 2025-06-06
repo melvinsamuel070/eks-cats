@@ -314,6 +314,12 @@ jobs:
       - name: Apply Prometheus ConfigMap
         run: |
          kubectl apply -f prometheus-configmap.yaml
+         
+
+      - name: Deploy Prometheus
+        run: |
+         kubectl apply -f prometheus-deployment.yaml
+
 
       - name: Restart Prometheus Pod to load new config
         run: |
