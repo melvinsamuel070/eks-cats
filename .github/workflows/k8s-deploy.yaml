@@ -292,32 +292,33 @@ jobs:
          sed "s/__VERSION__/${VERSION}/g" sinatra-service.yaml > k8s/service-updated.yaml
          cat k8s/deployment-updated.yaml | grep image
 
-      - name: Apply Kubernetes manifests
-        run: |
-         kubectl apply -f k8s/deployment-updated.yaml -n prometheus
-         kubectl apply -f k8s/service-updated.yaml -n prometheus
-      - name: Force rollout
-        run: |
-         kubectl rollout restart deployment/sinatra-v1
-
-      - name: Verify pods are running new image version
-        run: |
-         sleep 15
-         kubectl get pods -l app=sinatra -o jsonpath="{range .items[*]}{.metadata.name}:{range .spec.containers[*]}{.image}{'\n'}{end}{end}"
-
       - name: Ensure Prometheus namespace exists
         run: |
          kubectl get namespace prometheus || kubectl create namespace prometheus
 
+      - name: Apply Kubernetes manifests
+        run: |
+           kubectl apply -f k8s/deployment-updated.yaml -n prometheus
+           kubectl apply -f k8s/service-updated.yaml -n prometheus
+
+      - name: Force rollout
+        run: |
+          kubectl rollout restart deployment/sinatra-v1 -n prometheus
+
+      - name: Verify pods are running new image version
+        run: |
+         sleep 15
+         kubectl get pods -n prometheus -l app=sinatra -o jsonpath="{range .items[*]}{.metadata.name}:{range .spec.containers[*]}{.image}{'\n'}{end}{end}"
+
       - name: Apply Prometheus ConfigMap and manifests
         run: |
-         kubectl apply -f prometheus-configmap. -n prometheus
-         kubectl apply -f k8s/deployment-updated.yaml -n prometheus
-         kubectl apply -f k8s/service-updated.yaml -n prometheus  
+          kubectl apply -f prometheus-configmap.yaml -n prometheus
+          kubectl apply -f k8s/deployment-updated.yaml -n prometheus
+          kubectl apply -f k8s/service-updated.yaml -n prometheus
 
       - name: Restart Prometheus Pod to load new config
         run: |
-          kubectl -n prometheus rollout restart deployment/prometheus-deployment
+          kubectl rollout restart deployment/prometheus-deployment -n prometheus
 
 
       - name: Test application health
