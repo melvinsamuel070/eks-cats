@@ -320,11 +320,8 @@ jobs:
 
       - name: Restart Prometheus Pod to load new config
         run: |
-          kubectl rollout restart deployment/prometheus-server -n prometheus
-
-      - name: get pod logs
-        run: |
-          kubectl logs -f deployment/prometheus-server -n prometheus
+          kubectl rollout restart deployment/sinatra-v1 -n prometheus
+          
 
       - name: Test application health
         run: |
