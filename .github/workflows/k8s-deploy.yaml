@@ -290,14 +290,15 @@ jobs:
          mkdir -p k8s
          sed "s/__VERSION__/${VERSION}/g" deployment.yaml > k8s/deployment-updated.yaml
          sed "s/__VERSION__/${VERSION}/g" sinatra-service.yaml > k8s/service-updated.yaml
-         cat k8s/deployment-updated.yaml | grep image
+         echo "Docker image in use:"
+         grep image k8s/deployment-updated.yaml
 
-      - name: Apply Kubernetes manifests
+      - name: Apply Sinatra Deployment and Service
         run: |
          kubectl apply -f k8s/deployment-updated.yaml
          kubectl apply -f k8s/service-updated.yaml
 
-      - name: Force rollout
+      - name: Force rollout of Sinatra deployment
         run: |
          kubectl rollout restart deployment/sinatra-v1
 
@@ -308,18 +309,16 @@ jobs:
 
       - name: Ensure Prometheus namespace exists
         run: |
-         kubectl get namespace prometheus || kubectl create namespace prometheus
+          kubectl get namespace prometheus || kubectl create namespace prometheus
 
-      - name: Apply Prometheus ConfigMap and manifests
+      - name: Apply Prometheus ConfigMap
         run: |
          kubectl apply -f prometheus-configmap.yaml
-         kubectl apply -f k8s/deployment-updated.yaml
-         kubectl apply -f k8s/service-updated.yaml
 
       - name: Restart Prometheus Pod to load new config
         run: |
-          kubectl -n prometheus rollout restart deployment/prometheus-deployment
-
+         DEPLOY=$(kubectl -n prometheus get deploy -o jsonpath="{.items[0].metadata.name}")
+         kubectl -n prometheus rollout restart deployment/$DEPLOY
 
       - name: Test application health
         run: |
